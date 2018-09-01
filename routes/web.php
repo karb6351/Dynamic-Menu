@@ -15,4 +15,4 @@ Route::get('/', 'Frontend\PagesController@index');
 
 Route::get('/menu', 'Frontend\PagesController@menu');
 
-Route::post('/menu', 'Frontend\PageController@update');
+Route::post('/menu', 'Frontend\PagesController@update');

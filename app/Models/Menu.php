@@ -11,12 +11,44 @@ class Menu extends Model
     use NodeTrait;
     use SoftDeletes;
 
+    const MAX_DEPTH = 2;
+
     protected $softDelete = true;
 
     protected $fillable = ['name_en', 'name_zh_hk', 'url', 'show'];
 
-    protected static function build(){
-        return self::get()->toTree();
+    public static function getTree(){
+        return self::defaultOrder()->get()->toTree();
+    }
+
+    public static function build(Array $data){
+        try{
+            self::create($data);
+        }catch(\Exception $e){
+            return false;
+        }
+        return true;
+    }
+
+    public static function rebuild(Array $data, Menu $root = null){
+        if (!$root){
+            $root = self::whereIsRoot()->get();
+        }
+        try{
+            self::rebuildSubtree($root, $data);
+        }catch(\Exception $e){
+            return false;
+        }
+        return true;
+    }
+
+    /* database relation */
+    public function menus(){
+        return $this->hasMany('App\Models\Menu');
+    }
+
+    public function menu(){
+        return $this->belongsTo('App\Models\Menu');
     }
 
     /* create base menu */
@@ -83,11 +115,4 @@ class Menu extends Model
     }
 
 
-    public function menus(){
-        return $this->hasMany('App\Models\Menu');
-    }
-
-    public function menu(){
-        return $this->belongsTo('App\Models\Menu');
-    }
 }

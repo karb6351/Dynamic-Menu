@@ -22,13 +22,12 @@ const app = new Vue({
     el: '#app',
     methods:{
         async updateTree(menu){
-            // const parseMenu = J.stringify(menu)
             console.log(menu)
             try{
                 const promise = await axios.post(window.location.href + 'menu', menu)
-                // console.log(promise.data)
+                console.log(promise.data)
             }catch(e){
-                console.log(e)
+                console.log(e.response.data)
             }
         }
     }
