@@ -1,5 +1,5 @@
 <template>
-    <Tree :data="menuTree" draggable="draggable" cross-tree="cross-tree" @change="treeChange" :is-Node-Droppable="maxDroppableLevel">
+    <Tree :data="menuTree" draggable="draggable" cross-tree="cross-tree" @change="treeChange"  @drag="ondrag">
         <div slot-scope="{data, store}">
             <template v-if="!data.isDragPlaceHolder">
                 <b v-if="data.children && data.children.length" @click="store.toggleOpen(data)">
@@ -13,6 +13,8 @@
 
 <script>
     import {DraggableTree} from 'vue-draggable-nested-tree'
+    import * as th from 'tree-helper'
+
     export default {
         name: "MenuTree",
         components:{
@@ -33,14 +35,33 @@
         },
         methods:{
             //trigger when user change the item position
-            treeChange(node, nodeVm, store){
-                this.updateTree = store.pure(store.rootData, true).children
+            treeChange(node, targetTree, oldTreestore){
+                this.updateTree = targetTree.pure(targetTree.rootData, true).children
                 this.$emit('drag', this.updateTree)
             },
-            //max depth
-            maxDroppableLevel(node, nodeVm, store){
-                return node.level <= this.maxDepth
-            }
+            // depth limit handling
+            ondrag(node) {
+                const {maxDepth} = this
+                let nodeLevels = 1
+                th.depthFirstSearch(node, (childNode) => {
+
+                    if (childNode._vm.level > nodeLevels) {
+                        nodeLevels = childNode._vm.level
+                    }
+                })
+                nodeLevels = nodeLevels - node._vm.level + 1
+                const childNodeMaxLevel = maxDepth - nodeLevels
+                //
+                th.depthFirstSearch(this.menuTree, (childNode) => {
+                    if (childNode === node) {
+                        return 'skip children'
+                    }
+                    if (!childNode._vm) {
+                        console.log(childNode);
+                    }
+                    this.$set(childNode, 'droppable', childNode._vm.level <= childNodeMaxLevel)
+                })
+            },
         },
     }
 </script>

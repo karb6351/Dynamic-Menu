@@ -406,6 +406,7 @@ module.exports = g;
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(global) {/* unused harmony export store */
+/* unused harmony export glb */
 /* unused harmony export isset */
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return isArray; });
 /* unused harmony export isBool */
@@ -455,6 +456,10 @@ module.exports = g;
 /* unused harmony export pairRows */
 /* unused harmony export executeWithCount */
 /* unused harmony export watchChange */
+/* unused harmony export store_executeOnceInScopeByName */
+/* unused harmony export executeOnceInScopeByName */
+/* unused harmony export debounce */
+/* unused harmony export joinMethods */
 /* unused harmony export executePromiseGetters */
 /* unused harmony export getUrlParam */
 /* unused harmony export uniqueId */
@@ -487,12 +492,12 @@ module.exports = g;
 /* unused harmony export URLHelper */
 /* unused harmony export resolveArgsByType */
 /* unused harmony export makeStorageHelper */
-/* unused harmony export localStorage2 */
-/* unused harmony export sessionStorage2 */
+/* unused harmony export getLocalStorage2 */
+/* unused harmony export getSessionStorage2 */
 /* unused harmony export EventProcessor */
 /* unused harmony export CrossWindow */
 /*!
- * helper-js v1.1.1
+ * helper-js v1.2.2
  * (c) 2018-present phphe <phphe@outlook.com> (https://github.com/phphe)
  * Released under the MIT License.
  */
@@ -609,17 +614,26 @@ function _nonIterableSpread() {
   throw new TypeError("Invalid attempt to spread non-iterable instance");
 }
 
-// resolve global
-var glb;
+// local store
+var store = {}; // get global
 
-try {
-  glb = global;
-} catch (e) {
-  glb = window;
-} // local store
+function glb() {
+  if (store.glb) {
+    return store.glb;
+  } else {
+    // resolve global
+    var t;
 
+    try {
+      t = global;
+    } catch (e) {
+      t = window;
+    }
 
-var store = {}; // is 各种判断
+    store.glb = t;
+    return t;
+  }
+} // is 各种判断
 
 function isset(v) {
   return typeof v !== 'undefined';
@@ -874,7 +888,7 @@ function groupArray(arr, getMark) {
   return r;
 }
 function arrayDistinct(arr) {
-  if (glb.Set) {
+  if (glb().Set) {
     return _toConsumableArray(new Set(arr));
   } else {
     return arr.filter(function (v, i, a) {
@@ -1237,17 +1251,16 @@ function pairRows(rows1, rows2, key1, key2) {
   return rows1.map(function (row1) {
     return [row1, map[row1[key1]]];
   });
-} // function
+} // function helper | method helper
 
-function executeWithCount(func, context) {
+function executeWithCount(func) {
   var count = 0;
   return function () {
     for (var _len = arguments.length, args = new Array(_len), _key2 = 0; _key2 < _len; _key2++) {
       args[_key2] = arguments[_key2];
     }
 
-    args.unshift(count++);
-    return func.apply(context, args);
+    return func.call.apply(func, [this, count++].concat(args));
   };
 }
 function watchChange(getVal, handler) {
@@ -1268,6 +1281,134 @@ function watchChange(getVal, handler) {
   };
 
   return update;
+}
+var store_executeOnceInScopeByName = {};
+function executeOnceInScopeByName(name, action) {
+  var scope = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : scope_executeOnceInScopeByName;
+  var storeResult = arguments.length > 3 ? arguments[3] : undefined;
+  name = "executeOnceInScopeByName_".concat(name);
+
+  if (!scope[name]) {
+    var value = action();
+
+    var destroy = function destroy() {
+      delete scope[name];
+    };
+
+    scope[name] = {
+      destroy: destroy
+    };
+
+    if (storeResult) {
+      scope[name].value = value;
+    }
+  }
+
+  return scope[name];
+}
+function debounce(action) {
+  var wait = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+  var immediate = arguments.length > 2 ? arguments[2] : undefined;
+  var t;
+  var delaying;
+  var lastArgs; // when trailing, use last args
+
+  var wrappedAction = function wrappedAction() {
+    var _this = this;
+
+    var self = wrappedAction;
+
+    for (var _len3 = arguments.length, args = new Array(_len3), _key4 = 0; _key4 < _len3; _key4++) {
+      args[_key4] = arguments[_key4];
+    }
+
+    lastArgs = args;
+
+    if (!delaying) {
+      delaying = true;
+      self.destroyed = false;
+
+      if (immediate) {
+        action.call.apply(action, [this].concat(args));
+        t = setTimeout(function () {
+          t = null;
+          delaying = false;
+          self.destroyed = true;
+        }, wait);
+      } else {
+        t = setTimeout(function () {
+          action.call.apply(action, [_this].concat(_toConsumableArray(lastArgs)));
+          t = null;
+          delaying = false;
+          self.destroyed = true;
+        }, wait);
+      }
+    }
+  };
+
+  wrappedAction.destroy = function () {
+    if (t) {
+      clearTimeout(t);
+      t = null;
+    }
+
+    delaying = false;
+    self.destroyed = true;
+  };
+
+  return wrappedAction;
+}
+/**
+ * [joinMethods description]
+ * @param  {[Function[]]} methods        [description]
+ * @param  {String} [mode='value'] [value, pipeline]
+ * @return {[Function]}                [description]
+ */
+
+function joinMethods(methods) {
+  var mode = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'value';
+  var simpleJoinedMethod;
+  var _iteratorNormalCompletion4 = true;
+  var _didIteratorError4 = false;
+  var _iteratorError4 = undefined;
+
+  try {
+    var _loop2 = function _loop2() {
+      var method = _step4.value;
+      var old = simpleJoinedMethod;
+
+      if (old) {
+        simpleJoinedMethod = function simpleJoinedMethod() {
+          for (var _len4 = arguments.length, args = new Array(_len4), _key5 = 0; _key5 < _len4; _key5++) {
+            args[_key5] = arguments[_key5];
+          }
+
+          return method.call.apply(method, [this, mode === 'value' ? old.call.apply(old, [this].concat(args)) : old].concat(args));
+        };
+      } else {
+        simpleJoinedMethod = method;
+      }
+    };
+
+    for (var _iterator4 = methods[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+      _loop2();
+    }
+  } catch (err) {
+    _didIteratorError4 = true;
+    _iteratorError4 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+        _iterator4.return();
+      }
+    } finally {
+      if (_didIteratorError4) {
+        throw _iteratorError4;
+      }
+    }
+  }
+
+  return simpleJoinedMethod;
 } // promise
 // execute promise in sequence
 
@@ -1386,16 +1527,30 @@ function getOffset(el) {
   };
 }
 function offsetToPosition(el, of) {
-  var p = {
-    x: el.offsetLeft,
-    y: el.offsetTop // position
+  var offsetParent = el.offsetParent;
 
+  if (!offsetParent || offsetParent === document.body && getComputedStyle(document.body).position === 'static') {
+    offsetParent = document.body.parentElement;
+  }
+
+  var ps = {
+    x: el.offsetLeft,
+    y: el.offsetTop
   };
-  var elOf = getOffset(el);
-  return {
-    x: of.x - (elOf.x - p.x),
-    y: of.y - (elOf.y - p.y)
-  };
+  var parent = el;
+
+  while (true) {
+    parent = parent.parentElement;
+
+    if (parent === offsetParent || !parent) {
+      break;
+    }
+
+    ps.x -= parent.scrollLeft;
+    ps.y -= parent.scrollTop;
+  }
+
+  return ps;
 }
 function findParent(el, callback) {
   return doFindParent(el, callback);
@@ -1476,7 +1631,7 @@ function getBorder(el) {
     left: of.x,
     right: of.x + workArea.offsetWidth,
     top: of.y + 50,
-    bottom: body.offsetHeight < glb.innerHeight ? glb.innerHeight : body.offsetHeight
+    bottom: body.offsetHeight < glb().innerHeight ? glb().innerHeight : body.offsetHeight
   };
 }
 function setElChildByIndex(el, index, child) {
@@ -1510,21 +1665,29 @@ function setElChildByIndex(el, index, child) {
 } // dom event
 
 function onDOM(el, name, handler) {
+  for (var _len5 = arguments.length, args = new Array(_len5 > 3 ? _len5 - 3 : 0), _key6 = 3; _key6 < _len5; _key6++) {
+    args[_key6 - 3] = arguments[_key6];
+  }
+
   if (el.addEventListener) {
     // 所有主流浏览器，除了 IE 8 及更早 IE版本
-    el.addEventListener(name, handler);
+    el.addEventListener.apply(el, [name, handler].concat(args));
   } else if (el.attachEvent) {
     // IE 8 及更早 IE 版本
-    el.attachEvent("on".concat(name), handler);
+    el.attachEvent.apply(el, ["on".concat(name), handler].concat(args));
   }
 }
 function offDOM(el, name, handler) {
+  for (var _len6 = arguments.length, args = new Array(_len6 > 3 ? _len6 - 3 : 0), _key7 = 3; _key7 < _len6; _key7++) {
+    args[_key7 - 3] = arguments[_key7];
+  }
+
   if (el.removeEventListener) {
     // 所有主流浏览器，除了 IE 8 及更早 IE版本
-    el.removeEventListener(name, handler);
+    el.removeEventListener.apply(el, [name, handler].concat(args));
   } else if (el.detachEvent) {
     // IE 8 及更早 IE 版本
-    el.detachEvent("on".concat(name), handler);
+    el.detachEvent.apply(el, ["on".concat(name), handler].concat(args));
   }
 } // advance
 // binarySearch 二分查找
@@ -1581,9 +1744,9 @@ function windowLoaded() {
     if (document && document.readyState === 'complete') {
       resolve();
     } else {
-      glb.addEventListener('load', function once() {
+      glb().addEventListener('load', function once() {
         resolve();
-        glb.removeEventListener('load', once);
+        glb().removeEventListener('load', once);
       });
     }
   });
@@ -1612,7 +1775,7 @@ function waitFor(name, condition) {
   var waits = store.waitFor;
 
   if (name && isset(waits[name])) {
-    glb.clearInterval(waits[name]);
+    glb().clearInterval(waits[name]);
     delete waits[name];
   }
 
@@ -1636,15 +1799,15 @@ function waitFor(name, condition) {
     function stop(interval, name) {
       if (interval) {
         if (name && isset(waits[name])) {
-          glb.clearInterval(waits[name]);
+          glb().clearInterval(waits[name]);
           delete waits[name];
         } else {
-          glb.clearInterval(interval);
+          glb().clearInterval(interval);
         }
       }
     }
 
-    var interval = glb.setInterval(function () {
+    var interval = glb().setInterval(function () {
       judge(interval);
     }, time);
 
@@ -1738,7 +1901,7 @@ function copyTextToClipboard(text) {
 } // jquery
 
 function jqFixedSize(sel) {
-  var $ = glb.jQuery;
+  var $ = glb().jQuery;
   $(sel).each(function () {
     var t = $(this);
     t.css({
@@ -1758,7 +1921,7 @@ function jqMakeCarousel(wrapperSel, listSel, itemSel) {
   }
 
   var spaceNumber = parseFloat(space);
-  var $ = glb.jQuery;
+  var $ = glb().jQuery;
   var wrapper = $(wrapperSel);
   var list = wrapper.find(listSel);
   wrapper.css({
@@ -1832,7 +1995,7 @@ function jqMakeCarousel(wrapperSel, listSel, itemSel) {
 
 function openWindow(url, name) {
   var opt = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-  glb.open(url, name, Object.keys(opt).map(function (k) {
+  glb().open(url, name, Object.keys(opt).map(function (k) {
     return "".concat(k, "=").concat(opt[k]);
   }).join(','));
 }
@@ -1841,8 +2004,8 @@ function openCenterWindow(url, name, width, height) {
   var t = {
     width: width,
     height: height,
-    top: (glb.screen.availHeight - 30 - height) / 2,
-    left: (glb.screen.availWidth - 30 - width) / 2
+    top: (glb().screen.availHeight - 30 - height) / 2,
+    left: (glb().screen.availWidth - 30 - width) / 2
   };
   Object.assign(t, opt);
   openWindow(url, name, t);
@@ -1852,7 +2015,7 @@ var URLHelper =
 function () {
   // protocol, hostname, port, pastname
   function URLHelper(baseUrl) {
-    var _this = this;
+    var _this2 = this;
 
     _classCallCheck(this, URLHelper);
 
@@ -1874,7 +2037,7 @@ function () {
     if (t[1]) {
       t[1].split('&').forEach(function (v) {
         var t2 = v.split('=');
-        _this.search[t2[0]] = t2[1] == null ? '' : decodeURIComponent(t2[1]);
+        _this2.search[t2[0]] = t2[1] == null ? '' : decodeURIComponent(t2[1]);
       });
     }
   }
@@ -1882,11 +2045,11 @@ function () {
   _createClass(URLHelper, [{
     key: "getHref",
     value: function getHref() {
-      var _this2 = this;
+      var _this3 = this;
 
       var t = [this.baseUrl];
       var searchStr = Object.keys(this.search).map(function (k) {
-        return "".concat(k, "=").concat(encodeURIComponent(_this2.search[k]));
+        return "".concat(k, "=").concat(encodeURIComponent(_this3.search[k]));
       }).join('&');
 
       if (searchStr) {
@@ -1950,7 +2113,7 @@ function makeStorageHelper(storage) {
       } else {
         this.storage.setItem(name, JSON.stringify({
           value: value,
-          expired_at: minutes && new Date().getTime() / 1000 + minutes * 60
+          expired_at: minutes ? new Date().getTime() + minutes * 60 * 1000 : null
         }));
       }
     },
@@ -1974,8 +2137,20 @@ function makeStorageHelper(storage) {
     }
   };
 }
-var localStorage2 = makeStorageHelper(glb.localStorage);
-var sessionStorage2 = makeStorageHelper(glb.sessionStorage); // 事件处理
+function getLocalStorage2() {
+  if (!store.localStorage2) {
+    store.localStorage2 = makeStorageHelper(glb().localStorage);
+  }
+
+  return store.localStorage2;
+}
+function getSessionStorage2() {
+  if (!store.sessionStorage2) {
+    store.sessionStorage2 = makeStorageHelper(glb().sessionStorage);
+  }
+
+  return store.sessionStorage2;
+} // 事件处理
 
 var EventProcessor =
 /*#__PURE__*/
@@ -2002,10 +2177,10 @@ function () {
   }, {
     key: "once",
     value: function once(name, handler) {
-      var _this3 = this;
+      var _this4 = this;
 
       var off = function off() {
-        _this3.off(name, wrappedHandler);
+        _this4.off(name, wrappedHandler);
       };
 
       var wrappedHandler = function wrappedHandler() {
@@ -2041,35 +2216,35 @@ function () {
     value: function emit(name) {
       // 重要: 先找到要执行的项放在新数组里, 因为执行项会改变事件项存储数组
       var items = [];
-      var _iteratorNormalCompletion4 = true;
-      var _didIteratorError4 = false;
-      var _iteratorError4 = undefined;
+      var _iteratorNormalCompletion5 = true;
+      var _didIteratorError5 = false;
+      var _iteratorError5 = undefined;
 
       try {
-        for (var _iterator4 = this.eventStore[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-          var item = _step4.value;
+        for (var _iterator5 = this.eventStore[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+          var item = _step5.value;
 
           if (item.name === name) {
             items.push(item);
           }
         }
       } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
+        _didIteratorError5 = true;
+        _iteratorError5 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-            _iterator4.return();
+          if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
+            _iterator5.return();
           }
         } finally {
-          if (_didIteratorError4) {
-            throw _iteratorError4;
+          if (_didIteratorError5) {
+            throw _iteratorError5;
           }
         }
       }
 
-      for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key4 = 1; _key4 < _len3; _key4++) {
-        args[_key4 - 1] = arguments[_key4];
+      for (var _len7 = arguments.length, args = new Array(_len7 > 1 ? _len7 - 1 : 0), _key8 = 1; _key8 < _len7; _key8++) {
+        args[_key8 - 1] = arguments[_key8];
       }
 
       for (var _i9 = 0; _i9 < items.length; _i9++) {
@@ -2088,12 +2263,12 @@ function (_EventProcessor) {
   _inherits(CrossWindow, _EventProcessor);
 
   function CrossWindow() {
-    var _this4;
+    var _this5;
 
     _classCallCheck(this, CrossWindow);
 
-    _this4 = _possibleConstructorReturn(this, (CrossWindow.__proto__ || Object.getPrototypeOf(CrossWindow)).call(this));
-    Object.defineProperty(_assertThisInitialized(_this4), "storageName", {
+    _this5 = _possibleConstructorReturn(this, (CrossWindow.__proto__ || Object.getPrototypeOf(CrossWindow)).call(this));
+    Object.defineProperty(_assertThisInitialized(_this5), "storageName", {
       configurable: true,
       enumerable: true,
       writable: true,
@@ -2104,17 +2279,17 @@ function (_EventProcessor) {
     if (!cls._listen) {
       cls._listen = true;
       onDOM(window, 'storage', function (ev) {
-        if (ev.key === _this4.storageName) {
+        if (ev.key === _this5.storageName) {
           var _get2;
 
           var event = JSON.parse(ev.newValue);
 
-          (_get2 = _get(CrossWindow.prototype.__proto__ || Object.getPrototypeOf(CrossWindow.prototype), "emit", _assertThisInitialized(_this4))).call.apply(_get2, [_this4, event.name].concat(_toConsumableArray(event.args)));
+          (_get2 = _get(CrossWindow.prototype.__proto__ || Object.getPrototypeOf(CrossWindow.prototype), "emit", _assertThisInitialized(_this5))).call.apply(_get2, [_this5, event.name].concat(_toConsumableArray(event.args)));
         }
       });
     }
 
-    return _this4;
+    return _this5;
   }
 
   _createClass(CrossWindow, [{
@@ -2122,13 +2297,13 @@ function (_EventProcessor) {
     value: function emit(name) {
       var _get3;
 
-      for (var _len4 = arguments.length, args = new Array(_len4 > 1 ? _len4 - 1 : 0), _key5 = 1; _key5 < _len4; _key5++) {
-        args[_key5 - 1] = arguments[_key5];
+      for (var _len8 = arguments.length, args = new Array(_len8 > 1 ? _len8 - 1 : 0), _key9 = 1; _key9 < _len8; _key9++) {
+        args[_key9 - 1] = arguments[_key9];
       }
 
       (_get3 = _get(CrossWindow.prototype.__proto__ || Object.getPrototypeOf(CrossWindow.prototype), "emit", this)).call.apply(_get3, [this, name].concat(args));
 
-      glb.localStorage.setItem(this.storageName, JSON.stringify({
+      glb().localStorage.setItem(this.storageName, JSON.stringify({
         name: name,
         args: args,
         // use random make storage event triggered every time
@@ -49748,13 +49923,13 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(62)
+  __webpack_require__(44)
 }
 var normalizeComponent = __webpack_require__(49)
 /* script */
 var __vue_script__ = __webpack_require__(50)
 /* template */
-var __vue_template__ = __webpack_require__(64)
+var __vue_template__ = __webpack_require__(55)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -49793,8 +49968,46 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 44 */,
-/* 45 */,
+/* 44 */
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(45);
+if(typeof content === 'string') content = [[module.i, content, '']];
+if(content.locals) module.exports = content.locals;
+// add the styles to the DOM
+var update = __webpack_require__(47)("1443d0aa", content, false, {});
+// Hot Module Replacement
+if(false) {
+ // When the styles change, update the <style> tags
+ if(!content.locals) {
+   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-009ccf58\",\"scoped\":false,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MenuTree.vue", function() {
+     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-009ccf58\",\"scoped\":false,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MenuTree.vue");
+     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+     update(newContent);
+   });
+ }
+ // When the module is disposed, remove the <style> tags
+ module.hot.dispose(function() { update(); });
+}
+
+/***/ }),
+/* 45 */
+/***/ (function(module, exports, __webpack_require__) {
+
+exports = module.exports = __webpack_require__(46)(false);
+// imports
+
+
+// module
+exports.push([module.i, "\n.he-tree {\n  border: 1px solid #ccc;\n  padding: 20px;\n  float: left;\n  min-width: 300px;\n  margin-right: 30px;\n}\n.tree-node-inner {\n  padding: 5px;\n  border: 1px solid #ccc;\n  cursor: pointer;\n}\n.draggable-placeholder-inner {\n  border: 1px dashed #0088F8;\n  -webkit-box-sizing: border-box;\n          box-sizing: border-box;\n  background: rgba(0, 136, 249, 0.09);\n  color: #0088f9;\n  text-align: center;\n  padding: 0;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n}\n", ""]);
+
+// exports
+
+
+/***/ }),
 /* 46 */
 /***/ (function(module, exports) {
 
@@ -50253,6 +50466,7 @@ module.exports = function normalizeComponent (
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_vue_draggable_nested_tree__ = __webpack_require__(51);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_tree_helper__ = __webpack_require__(52);
 //
 //
 //
@@ -50266,6 +50480,8 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
+
+
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -50289,14 +50505,36 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
     methods: {
         //trigger when user change the item position
-        treeChange: function treeChange(node, nodeVm, store) {
-            this.updateTree = store.pure(store.rootData, true).children;
+        treeChange: function treeChange(node, targetTree, oldTreestore) {
+            this.updateTree = targetTree.pure(targetTree.rootData, true).children;
             this.$emit('drag', this.updateTree);
         },
 
-        //max depth
-        maxDroppableLevel: function maxDroppableLevel(node, nodeVm, store) {
-            return node.level <= this.maxDepth;
+        // depth limit handling
+        ondrag: function ondrag(node) {
+            var _this = this;
+
+            var maxDepth = this.maxDepth;
+
+            var nodeLevels = 1;
+            __WEBPACK_IMPORTED_MODULE_1_tree_helper__["c" /* depthFirstSearch */](node, function (childNode) {
+
+                if (childNode._vm.level > nodeLevels) {
+                    nodeLevels = childNode._vm.level;
+                }
+            });
+            nodeLevels = nodeLevels - node._vm.level + 1;
+            var childNodeMaxLevel = maxDepth - nodeLevels;
+            //
+            __WEBPACK_IMPORTED_MODULE_1_tree_helper__["c" /* depthFirstSearch */](this.menuTree, function (childNode) {
+                if (childNode === node) {
+                    return 'skip children';
+                }
+                if (!childNode._vm) {
+                    console.log(childNode);
+                }
+                _this.$set(childNode, 'droppable', childNode._vm.level <= childNodeMaxLevel);
+            });
         }
     }
 });
@@ -50310,11 +50548,11 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* unused harmony export TreeNode */
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return DraggableTree; });
 /* unused harmony export DraggableTreeNode */
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_helper_js__ = __webpack_require__(2);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_tree_helper__ = __webpack_require__(52);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_tree_helper__ = __webpack_require__(52);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_helper_js__ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_draggable_helper__ = __webpack_require__(53);
 /*!
- * vue-draggable-nested-tree v2.0.2
+ * vue-draggable-nested-tree v2.2.2
  * (c) 2018-present phphe <phphe@outlook.com>
  * Released under the MIT License.
  */
@@ -50333,9 +50571,9 @@ var TreeNode = {
     return _c('div', {
       staticClass: "tree-node",
       class: [_vm.data.active ? _vm.store.activatedClass : '', _vm.data.open ? _vm.store.openedClass : '', _vm.data.class],
+      style: _vm.data.style,
       attrs: {
-        "id": _vm.data._id,
-        "data-level": _vm.data.level
+        "id": _vm.data._id
       }
     }, [!_vm.isRoot ? _c('div', {
       staticClass: "tree-node-inner-back",
@@ -50347,7 +50585,8 @@ var TreeNode = {
       style: [_vm.data.innerStyle]
     }, [_vm._t("default", null, {
       data: _vm.data,
-      store: _vm.store
+      store: _vm.store,
+      vm: _vm.vm
     })], 2)]) : _vm._e(), _vm.childrenVisible ? _c('div', {
       staticClass: "tree-node-children"
     }, _vm._l(_vm.data.children, function (child) {
@@ -50355,14 +50594,16 @@ var TreeNode = {
         key: child._id,
         attrs: {
           "data": child,
-          "store": _vm.store
+          "store": _vm.store,
+          "level": _vm.childrenLevel
         },
         scopedSlots: _vm._u([{
           key: "default",
           fn: function fn(props) {
             return [_vm._t("default", null, {
               data: props.data,
-              store: props.store
+              store: props.store,
+              vm: props.vm
             })];
           }
         }])
@@ -50373,14 +50614,23 @@ var TreeNode = {
   name: 'TreeNode',
   props: {
     data: {},
-    store: {}
+    store: {},
+    level: {
+      default: 0
+    } // readonly
+
   },
   data: function data() {
-    return {};
+    return {
+      vm: this
+    };
   },
   computed: {
+    childrenLevel: function childrenLevel() {
+      return this.level + 1;
+    },
     isRoot: function isRoot() {
-      return this.data.level === 0;
+      return this.data.isRoot;
     },
     childrenVisible: function childrenVisible() {
       var data = this.data;
@@ -50391,9 +50641,8 @@ var TreeNode = {
         marginBottom: this.store.space + 'px'
       };
 
-      if (!this.isRoot && this.data.level > 1) {
-        var indentType = this.store.indentType;
-        r.paddingLeft = (this.data.level - 1) * this.store.indent + 'px';
+      if (!this.isRoot && this.level > 1) {
+        r.paddingLeft = (this.level - 1) * this.store.indent + 'px';
       }
 
       return r;
@@ -50405,14 +50654,10 @@ var TreeNode = {
       handler: function handler(data) {
         if (data) {
           data._vm = this;
-        }
-      }
-    },
-    'data.parent': {
-      immediate: true,
-      handler: function handler(parent, old) {
-        if (parent !== old) {
-          this.store.updateBranchLevel(this.data);
+
+          if (!data._treeNodePropertiesCompleted && !data.isRoot) {
+            this.store.compeleteNode(data, this.$parent.data);
+          }
         }
       }
     }
@@ -50442,7 +50687,8 @@ var Tree = {
         fn: function fn(props) {
           return [_vm._t("default", null, {
             data: props.data,
-            store: _vm.store
+            store: _vm.store,
+            vm: props.vm
           })];
         }
       }])
@@ -50452,9 +50698,11 @@ var Tree = {
   props: {
     data: {},
     idLength: {
+      type: Number,
       default: 5
     },
     indent: {
+      type: Number,
       default: 16
     },
     activatedClass: {
@@ -50464,6 +50712,7 @@ var Tree = {
       default: 'open'
     },
     space: {
+      type: Number,
       default: 10
     } // space between node, unit px
 
@@ -50474,85 +50723,62 @@ var Tree = {
   data: function data() {
     return {
       store: this,
-      rootData: null,
-      activated: [],
-      opened: [],
-      idMapping: {}
+      rootData: null
     };
   },
-  computed: {},
+  // computed: {},
   watch: {
     data: {
       immediate: true,
       handler: function handler(data, old) {
         var _this = this;
 
-        // make rootData always use a same object
+        if (data === old) {
+          return;
+        } // make rootData always use a same object
+
+
         this.rootData = this.rootData || {
           isRoot: true,
-          _id: "tree_".concat(this._uid, "_node_root"),
-          level: 0
+          _id: "tree_".concat(this._uid, "_node_root")
         };
-        this.rootData.children = data;
-        var activated = [];
-        var opened = [];
-        var idMapping = {};
-        Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["b" /* breadthFirstSearch */])(data, function (item, k, parent) {
-          var compeletedData = {
-            open: true,
-            children: [],
-            active: false,
-            style: {},
-            class: '',
-            innerStyle: {},
-            innerClass: '',
-            innerBackStyle: {},
-            innerBackClass: {}
-          };
-
-          for (var key in compeletedData) {
-            if (!item.hasOwnProperty(key)) {
-              _this.$set(item, key, compeletedData[key]);
-            }
-          }
-
-          _this.$set(item, 'parent', parent || _this.rootData);
-
-          _this.$set(item, 'level', item.parent.level + 1);
-
-          if (!item.hasOwnProperty('_id')) {
-            item._id = "tree_".concat(_this._uid, "_node_").concat(Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["n" /* strRand */])(_this.idLength));
-          }
-
-          idMapping[item._id] = item;
-
-          if (item.active) {
-            activated.push(item);
-          }
-
-          if (item.open) {
-            opened.push(item);
-          }
+        Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["b" /* breadthFirstSearch */])(data, function (node, k, parent) {
+          _this.compeleteNode(node, parent);
         });
-        this.activated = activated;
-        this.opened = opened;
-        this.idMapping = idMapping;
+        this.rootData.children = data;
       }
     }
   },
   methods: {
-    updateBranchLevel: function updateBranchLevel(branch) {
-      var startLevel = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : branch.parent.level + 1;
-      branch.level = startLevel;
+    compeleteNode: function compeleteNode(node, parent) {
+      var compeletedData = {
+        open: true,
+        children: [],
+        active: false,
+        style: {},
+        class: '',
+        innerStyle: {},
+        innerClass: '',
+        innerBackStyle: {},
+        innerBackClass: {}
+      };
 
-      if (branch.children && branch.children.length > 0) {
-        Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["b" /* breadthFirstSearch */])(branch.children, function (node, i, p) {
-          node.level = node.parent.level + 1;
-        });
+      for (var key in compeletedData) {
+        if (!node.hasOwnProperty(key)) {
+          this.$set(node, key, compeletedData[key]);
+        }
       }
+
+      this.$set(node, 'parent', parent || this.rootData);
+
+      if (!node.hasOwnProperty('_id')) {
+        node._id = "tree_".concat(this._uid, "_node_").concat(Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["n" /* strRand */])(this.idLength));
+      }
+
+      node._treeNodePropertiesCompleted = true;
     },
     // pure node self
-    pure: function pure(node, withChildren) {
+    pure: function pure(node, withChildren, after) {
       var _this2 = this;
 
       var t = Object.assign({}, node);
@@ -50560,7 +50786,6 @@ var Tree = {
       delete t.parent;
       delete t.children;
       delete t.open;
-      delete t.level;
       delete t.active;
       delete t.style;
       delete t.class;
@@ -50586,17 +50811,49 @@ var Tree = {
         });
       }
 
-      return t;
-    },
-    activeNode: function activeNode(node, inactiveOld) {
-      if (inactiveOld) {
-        this.activated.forEach(function (item) {
-          item.active = false;
-        });
-        this.activated = [];
+      if (after) {
+        return after(t, node) || t;
       }
 
-      this.activated.push(node);
+      return t;
+    },
+    getNodeById: function getNodeById(id) {
+      var r;
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["b" /* breadthFirstSearch */])(this.rootData.children, function (node) {
+        if (node._id === id) {
+          r = node;
+          return false;
+        }
+      });
+      return r;
+    },
+    getActivated: function getActivated() {
+      var r = [];
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["b" /* breadthFirstSearch */])(this.rootData.children, function (node) {
+        if (node.active) {
+          r.push(node);
+        }
+      });
+      return r;
+    },
+    getOpened: function getOpened() {
+      var r = [];
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["b" /* breadthFirstSearch */])(this.rootData.children, function (node) {
+        if (node.open) {
+          r.push(node);
+        }
+      });
+      return r;
+    },
+    activeNode: function activeNode(node, inactiveOld) {
+      var activated = this.activated;
+
+      if (inactiveOld) {
+        this.getActivated().forEach(function (node2) {
+          node2.active = false;
+        });
+      }
+
       node.active = true;
     },
     toggleActive: function toggleActive(node, inactiveOld) {
@@ -50607,14 +50864,14 @@ var Tree = {
       }
     },
     openNode: function openNode(node, closeOld) {
+      var opened = this.opened;
+
       if (closeOld) {
-        this.opened.forEach(function (item) {
-          item.open = false;
+        this.getOpened().forEach(function (node2) {
+          node2.open = false;
         });
-        this.opened = [];
       }
 
-      this.opened.push(node);
       node.open = true;
     },
     toggleOpen: function toggleOpen(node, closeOld) {
@@ -50623,6 +50880,12 @@ var Tree = {
       } else {
         this.openNode(node, closeOld);
       }
+    },
+    getPureData: function getPureData(after) {
+      return this.pure(this.rootData, true, after).children;
+    },
+    deleteNode: function deleteNode(node) {
+      return Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["b" /* arrayRemove */])(node.parent.children, node);
     }
   } // created() {},
   // mounted() {},
@@ -50732,56 +50995,104 @@ function isPropTrue(v) {
 
 var targets = {
   'nothing': function nothing(info) {},
-  'after': function after(_ref) {
-    var dplh = _ref.dplh,
-        targetNode = _ref.targetNode,
-        currentTree = _ref.currentTree;
-    // after targetNode or closest droppable parent
-    var node = targetNode;
-
-    while (!node.parent._droppable) {
-      node = node.parent;
+  'after': function after(info) {
+    insertDplhAfterTo(info.dplh, info.targetNode, info);
+  },
+  'before': function before(info) {
+    if (isNodeDroppable(info.targetNode.parent)) {
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["e" /* insertBefore */])(info.dplh, info.targetNode);
+    } else {
+      insertDplhAfterTo(info.dplh, info.targetNode.parent, info);
     }
-
-    Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["d" /* insertAfter */])(dplh, node);
   },
-  'before': function before(_ref2) {
-    var dplh = _ref2.dplh,
-        targetNode = _ref2.targetNode;
-    Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["e" /* insertBefore */])(dplh, targetNode);
-  },
-  'append': function append(_ref3) {
-    var dplh = _ref3.dplh,
-        targetNode = _ref3.targetNode;
-    Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["a" /* appendTo */])(dplh, targetNode);
-    targetNode.open = true;
+  'append': function append(info) {
+    if (isNodeDroppable(info.targetNode)) {
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["a" /* appendTo */])(info.dplh, info.targetNode);
+      info.targetNode.open = true;
+    } else {
+      insertDplhAfterTo(info.dplh, info.targetNode, info);
+    }
   },
   'prepend': function prepend(info) {
-    var dplh = info.dplh,
-        targetNode = info.targetNode;
-    Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["f" /* prependTo */])(dplh, targetNode);
-    targetNode.open = true; // prepend may open a closed node which has children
-
-    if (!targetNode.open) {
-      targetNode.open = true;
-      resolveBranchDroppable(info, targetNode);
+    if (isNodeDroppable(info.targetNode)) {
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["f" /* prependTo */])(info.dplh, info.targetNode);
+      info.targetNode.open = true;
+    } else {
+      insertDplhAfterTo(info.dplh, info.targetNode, info);
     }
   },
-  'after target parent': function afterTargetParent(_ref4) {
-    var dplh = _ref4.dplh,
-        targetNode = _ref4.targetNode;
-    Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["d" /* insertAfter */])(dplh, targetNode.parent);
+  'after target parent': function afterTargetParent(info) {
+    insertDplhAfterTo(info.dplh, info.targetNode.parent, info);
   },
   // append to prev sibling
-  'append prev': function appendPrev(_ref5) {
-    var dplh = _ref5.dplh,
-        targetNode = _ref5.targetNode,
-        node = _ref5.node,
-        targetPrev = _ref5.targetPrev;
-    Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["a" /* appendTo */])(dplh, targetPrev);
-    targetPrev.open = true;
+  'append prev': function appendPrev(info) {
+    if (isNodeDroppable(info.targetPrev)) {
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["a" /* appendTo */])(info.dplh, info.targetPrev);
+      info.targetPrev.open = true;
+    } else {
+      insertDplhAfterTo(info.dplh, info.targetPrev, info);
+    }
+  },
+  // append to current tree
+  'append current tree': function appendCurrentTree(info) {
+    if (isNodeDroppable(info.currentTree.rootData)) {
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["a" /* appendTo */])(info.dplh, info.currentTree.rootData);
+    }
   }
 };
+
+function insertDplhAfterTo(dplh, targetNode, info) {
+  if (!targetNode) {
+    return false;
+  } else {
+    var closest = findParent(targetNode, function (node) {
+      return node.parent && isNodeDroppable(node.parent);
+    });
+
+    if (closest) {
+      Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["d" /* insertAfter */])(dplh, closest);
+    } else {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isNodeDraggable(node) {
+  if (!draggableIds.hasOwnProperty(node._id)) {
+    var r;
+
+    if (node.hasOwnProperty('draggable')) {
+      r = node.draggable;
+    } else if (node.parent) {
+      r = isNodeDraggable(node.parent);
+    } else {
+      r = true;
+    }
+
+    draggableIds[node._id] = r;
+  }
+
+  return draggableIds[node._id];
+}
+function isNodeDroppable(node) {
+  if (!droppableIds.hasOwnProperty(node._id)) {
+    var r;
+
+    if (node.hasOwnProperty('droppable')) {
+      r = node.droppable;
+    } else if (node.parent) {
+      r = isNodeDroppable(node.parent);
+    } else {
+      r = true;
+    }
+
+    droppableIds[node._id] = r;
+  }
+
+  return droppableIds[node._id];
+} // find child, excluding dragging node default
 
 function findChild(info, children, handler, reverse) {
   var len = children.length;
@@ -50807,6 +51118,19 @@ function findChild(info, children, handler, reverse) {
       }
     }
   }
+} // start from node self
+
+
+function findParent(node, handle) {
+  var current = node;
+
+  while (current) {
+    if (handle(current)) {
+      return current;
+    }
+
+    current = current.parent;
+  }
 }
 
 var rules = {
@@ -50818,13 +51142,27 @@ var rules = {
   'targetNode is placeholder': function targetNodeIsPlaceholder(info) {
     return info.targetNode.isDragPlaceHolder;
   },
-  // 另一节点父级是根节点
-  'targetNode parent is root': function targetNodeParentIsRoot(info) {
-    return info.targetNode.parent.isRoot;
+  // 另一节点在最上面
+  'targetNode at top': function targetNodeAtTop(info) {
+    return info.targetAtTop;
+  },
+  // 另一节点在最下面
+  'targetNode at bottom': function targetNodeAtBottom(info) {
+    return info.targetAtBottom;
+  },
+  // 另一节点是根节点第二个子
+  'targetNode is the second child of root': function targetNodeIsTheSecondChildOfRoot(info) {
+    return info.currentTreeRootSecondChildExcludingDragging === info.targetNode;
   },
   // 拖动点坐标在任一树中, 同时, 起始树要可拖出, 当前树要可拖入
   'currentTree existed': function currentTreeExisted(info) {
     return info.currentTree;
+  },
+  // 当前树为空(不包括占位节点)
+  'currentTree empty': function currentTreeEmpty(info) {
+    return !findChild(info, info.currentTree.rootData.children, function (v) {
+      return v;
+    });
   },
   // 占位节点存在
   'placeholder existed': function placeholderExisted(info) {
@@ -50842,19 +51180,11 @@ var rules = {
   'targetNode is open': function targetNodeIsOpen(info) {
     return info.targetNode.open;
   },
-  // 另一节点是根节点
-  'targetNode is root': function targetNodeIsRoot(info) {
-    return info.targetNode.isRoot;
-  },
   // 另一节点有子(不包括占位节点)
   'targetNode has children excluding placeholder': function targetNodeHasChildrenExcludingPlaceholder(info) {
     return findChild(info, info.targetNode.children, function (v) {
       return v !== info.dplh;
     });
-  },
-  // 另一节点可放置
-  'targetNode is droppable': function targetNodeIsDroppable(info) {
-    return info.targetNode._droppable;
   },
   // 另一节点是第一个节点
   'targetNode is 1st child': function targetNodeIs1stChild(info) {
@@ -50867,10 +51197,6 @@ var rules = {
     return findChild(info, info.targetNode.parent.children, function (v) {
       return v;
     }, true) === info.targetNode;
-  },
-  // 另一节点上一个节点可放置
-  'targetNode prev is droppable': function targetNodePrevIsDroppable(info) {
-    return info.targetPrev._droppable;
   },
   // 当前位置在另一节点inner垂直中线上
   'on targetNode middle': function onTargetNodeMiddle(info) {
@@ -50902,20 +51228,23 @@ for (var _i2 = 0; _i2 < _arr.length; _i2++) {
   _loop();
 }
 
-var prevTree; // context is vm
-// dhStore: draggable helper store
+var prevTree;
+var droppableIds = {};
+var draggableIds = {}; // context is vm
 
-function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
-  // make info
+function autoMoveDragPlaceHolder(draggableHelperInfo) {
+  var trees = this.store.trees;
+  var dhStore = draggableHelperInfo.store; // make info
+
   var info = {
-    event: e,
+    event: draggableHelperInfo.event,
     el: dhStore.el,
     vm: this,
     node: this.data,
     store: this.store,
     dplh: this.store.dplh,
     draggableHelperData: {
-      opt: opt,
+      opt: draggableHelperInfo.options,
       store: dhStore
     } //
 
@@ -50927,7 +51256,7 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
       return this.el.querySelector('.tree-node-inner');
     },
     offset: function offset() {
-      return Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["f" /* getOffset */])(this.nodeInnerEl);
+      return Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["f" /* getOffset */])(this.nodeInnerEl);
     },
     // left top point
     offset2: function offset2() {
@@ -50942,16 +51271,14 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
       var _this = this;
 
       var currentTree = trees.find(function (tree) {
-        return Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["i" /* isOffsetInEl */])(_this.offset.x, _this.offset.y, tree.$el);
+        return Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["i" /* isOffsetInEl */])(_this.offset.x, _this.offset.y, tree.$el);
       });
 
       if (currentTree) {
         var dragStartTree = this.store;
-        var treeChanged;
 
-        if (dhStore.movedCount === 0) {
+        if (prevTree == null) {
           prevTree = dragStartTree;
-          treeChanged = true;
         }
 
         if (prevTree !== currentTree) {
@@ -50960,17 +51287,10 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
           }
 
           prevTree = currentTree;
-          treeChanged = true;
         }
 
         if (!isPropTrue(currentTree.droppable)) {
           return;
-        }
-
-        if (treeChanged) {
-          // when move start or drag move into another tree
-          // resolve _droppable
-          resolveBranchDroppable(info, currentTree.rootData);
         }
 
         return currentTree;
@@ -50981,6 +51301,14 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
     },
     currentTreeRootOf4: function currentTreeRootOf4() {
       return getOf4(this.currentTreeRootEl, this.currentTree.space);
+    },
+    // the second child of currentTree root, excluding dragging node
+    currentTreeRootSecondChildExcludingDragging: function currentTreeRootSecondChildExcludingDragging() {
+      var _this2 = this;
+
+      return this.currentTree.rootData.children.slice(0, 3).filter(function (v) {
+        return v !== _this2.node;
+      })[1];
     },
     // placeholder
     dplhEl: function dplhEl() {
@@ -50993,10 +51321,13 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
       return getOf4(this.dplhEl, this.currentTree.space);
     },
     dplhAtTop: function dplhAtTop() {
-      return Math.abs(dplhOf4.y - this.currentTreeRootOf4.y) < 5;
+      return Math.abs(this.dplhOf4.y - this.currentTreeRootOf4.y) < 5;
     },
-    dplhAtBottom: function dplhAtBottom() {
-      return Math.abs(dplhOf4.y2 - this.currentTreeRootOf4.y2) < 5;
+    targetAtTop: function targetAtTop() {
+      return Math.abs(this.tiOf4.y - this.currentTreeRootOf4.y) < 5;
+    },
+    targetAtBottom: function targetAtBottom() {
+      return Math.abs(this.tiOf4.y2 - this.currentTreeRootOf4.y2) < 5;
     },
     // most related node
     // 最相关的另一个节点
@@ -51030,9 +51361,9 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
           break;
         }
 
-        var t = Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["d" /* binarySearch */])(children, function (node) {
+        var t = Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["d" /* binarySearch */])(children, function (node) {
           var el = document.getElementById(node._id);
-          var ty = Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["f" /* getOffset */])(el).y;
+          var ty = Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["f" /* getOffset */])(el).y;
           var ty2 = ty + el.offsetHeight + currentTree.space;
 
           if (ty2 < y) {
@@ -51081,7 +51412,10 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
       return this.targetNodeEl.querySelector('.tree-node-inner');
     },
     tiOffset: function tiOffset() {
-      return Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["f" /* getOffset */])(this.tiInnerEl);
+      return Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["f" /* getOffset */])(this.tiInnerEl);
+    },
+    tiOf4: function tiOf4() {
+      return getOf4(this.tiInnerEl, this.currentTree.space);
     },
     tiMiddleY: function tiMiddleY() {
       return this.tiOffset.y + this.tiInnerEl.offsetHeight / 2;
@@ -51091,7 +51425,7 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
       // tree node 之间不要有其他元素, 否则这里会获取到错误的元素
       var r = this.targetNodeEl.previousSibling;
 
-      if (Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["g" /* hasClass */])(r, 'dragging')) {
+      if (Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["g" /* hasClass */])(r, 'dragging')) {
         r = r.previousSibling;
       }
 
@@ -51099,7 +51433,7 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
     },
     targetPrev: function targetPrev() {
       var id = this.targetPrevEl.getAttribute('id');
-      return this.currentTree.idMapping[id];
+      return this.currentTree.getNodeById(id);
     }
   }); // attachCache end
   // decision start =================================
@@ -51114,7 +51448,13 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
         r = rules[ruleId](info);
       } catch (e) {
         r = e;
-        console.warn("failed to execute rule '".concat(ruleId, "'"), e);
+
+        try {
+          if (Object({"MIX_PUSHER_APP_KEY":"","MIX_PUSHER_APP_CLUSTER":"mt1","NODE_ENV":"development"}).DEVELOPE_SELF) {
+            // only visible when develop its self
+            console.warn("failed to execute rule '".concat(ruleId, "'"), e);
+          }
+        } catch (e2) {}
       }
 
       executedRuleCache[ruleId] = r;
@@ -51125,171 +51465,217 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
 
   if (exec('currentTree existed') === true) {
     if (exec('targetNode is placeholder') === false) {
-      if (exec('placeholder existed') === true) {
-        if (exec('placeholder in currentTree') === true) {
-          if (exec('targetNode parent is root') === false) {
-            if (exec('targetNode is open') === true) {
-              if (exec('targetNode has children excluding placeholder') === false) {
-                if (exec('targetNode is droppable') === true) {
-                  if (exec('at left') === false) {
-                    if (exec('targetNode is 1st child') === true) {
-                      if (exec('at indent right') === true) {
-                        targets['append'](info);
-                      } else if (exec('at indent right') === false) {
-                        targets['after'](info);
-                      }
-                    } else if (exec('targetNode is 1st child') === false) {
-                      targets['append'](info);
-                    }
-                  } else if (exec('at left') === true) {
-                    targets['after'](info);
-                  }
-                } else if (exec('targetNode is droppable') === false) {
-                  targets['after'](info);
-                }
-              } else if (exec('targetNode has children excluding placeholder') === true) {
-                if (exec('targetNode is droppable') === true) {
-                  targets['prepend'](info);
-                } else if (exec('targetNode is droppable') === false) {
-                  targets['after'](info);
-                }
-              }
-            } else if (exec('targetNode is open') === false) {
-              if (exec('targetNode is droppable') === true) {
-                if (exec('at indent right') === false) {
-                  targets['after'](info);
-                } else if (exec('at indent right') === true) {
-                  targets['prepend'](info);
-                }
-              } else if (exec('targetNode is droppable') === false) {
-                targets['after'](info);
-              }
+      if (exec('targetNode is the second child of root') === true) {
+        if (exec('targetNode has children excluding placeholder') === false) {
+          if (exec('on targetNode middle') === true) {
+            targets['before'](info);
+          } else if (exec('on targetNode middle') === false) {
+            if (exec('at indent right') === true) {
+              targets['append'](info);
+            } else if (exec('at indent right') === false) {
+              targets['after'](info);
             }
-          } else if (exec('targetNode parent is root') === true) {
-            if (exec('targetNode is open') === true) {
+          }
+        } else if (exec('targetNode has children excluding placeholder') === true) {
+          targets['prepend'](info);
+        }
+      } else if (exec('targetNode is the second child of root') === false) {
+        if (exec('currentTree empty') === false) {
+          if (exec('targetNode at top') === true) {
+            if (exec('placeholder in currentTree') === true) {
               if (exec('targetNode has children excluding placeholder') === false) {
-                if (exec('targetNode is droppable') === true) {
-                  if (exec('targetNode is 1st child') === false) {
-                    if (exec('targetNode prev is droppable') === false) {
-                      targets['append'](info);
-                    } else if (exec('targetNode prev is droppable') === true) {
-                      if (exec('at indent right') === false) {
-                        targets['after'](info);
-                      } else if (exec('at indent right') === true) {
-                        targets['append'](info);
-                      }
-                    }
-                  } else if (exec('targetNode is 1st child') === true) {
-                    if (exec('on targetNode middle') === true) {
-                      targets['before'](info);
-                    } else if (exec('on targetNode middle') === false) {
-                      if (exec('at indent right') === true) {
-                        targets['append'](info);
-                      } else if (exec('at indent right') === false) {
-                        targets['after'](info);
-                      }
-                    }
-                  }
-                } else if (exec('targetNode is droppable') === false) {
-                  if (exec('targetNode is 1st child') === false) {
-                    targets['after'](info);
-                  } else if (exec('targetNode is 1st child') === true) {
-                    if (exec('on targetNode middle') === true) {
-                      targets['before'](info);
-                    } else if (exec('on targetNode middle') === false) {
-                      targets['after'](info);
-                    }
-                  }
-                }
-              } else if (exec('targetNode has children excluding placeholder') === true) {
-                if (exec('targetNode is 1st child') === false) {
-                  targets['prepend'](info);
-                } else if (exec('targetNode is 1st child') === true) {
-                  if (exec('on targetNode middle') === true) {
-                    targets['before'](info);
-                  } else if (exec('on targetNode middle') === false) {
-                    targets['prepend'](info);
-                  }
-                }
-              }
-            } else if (exec('targetNode is open') === false) {
-              if (exec('targetNode is 1st child') === true) {
                 if (exec('on targetNode middle') === false) {
                   if (exec('at indent right') === false) {
                     targets['after'](info);
                   } else if (exec('at indent right') === true) {
-                    targets['prepend'](info);
+                    targets['append'](info);
                   }
                 } else if (exec('on targetNode middle') === true) {
                   targets['before'](info);
                 }
-              } else if (exec('targetNode is 1st child') === false) {
-                if (exec('at indent right') === true) {
+              } else if (exec('targetNode has children excluding placeholder') === true) {
+                if (exec('on targetNode middle') === false) {
                   targets['prepend'](info);
-                } else if (exec('at indent right') === false) {
-                  targets['after'](info);
+                } else if (exec('on targetNode middle') === true) {
+                  targets['before'](info);
+                }
+              }
+            } else if (exec('placeholder in currentTree') === false) {
+              targets['before'](info);
+            }
+          } else if (exec('targetNode at top') === false) {
+            if (exec('targetNode at bottom') === false) {
+              if (exec('placeholder at top') === true) {
+                targets['prepend'](info);
+              } else if (exec('placeholder at top') === false) {
+                if (exec('targetNode has children excluding placeholder') === true) {
+                  targets['prepend'](info);
+                } else if (exec('targetNode has children excluding placeholder') === false) {
+                  if (exec('targetNode is 1st child') === false) {
+                    if (exec('targetNode is last child') === false) {
+                      if (exec('on targetNode middle') === true) {
+                        if (exec('at indent right') === true) {
+                          targets['append'](info);
+                        } else if (exec('at indent right') === false) {
+                          targets['after'](info);
+                        }
+                      } else if (exec('on targetNode middle') === false) {
+                        if (exec('at indent right') === true) {
+                          targets['append'](info);
+                        } else if (exec('at indent right') === false) {
+                          targets['after'](info);
+                        }
+                      }
+                    } else if (exec('targetNode is last child') === true) {
+                      if (exec('at indent right') === true) {
+                        targets['append'](info);
+                      } else if (exec('at indent right') === false) {
+                        targets['after'](info);
+                      }
+                    }
+                  } else if (exec('targetNode is 1st child') === true) {
+                    if (exec('targetNode is last child') === true) {
+                      targets['append'](info);
+                    } else if (exec('targetNode is last child') === false) {
+                      if (exec('on targetNode middle') === false) {
+                        if (exec('at indent right') === false) {
+                          targets['after'](info);
+                        } else if (exec('at indent right') === true) {
+                          targets['append'](info);
+                        }
+                      } else if (exec('on targetNode middle') === true) {
+                        if (exec('at indent right') === false) {
+                          targets['after'](info);
+                        } else if (exec('at indent right') === true) {
+                          targets['append'](info);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            } else if (exec('targetNode at bottom') === true) {
+              if (exec('placeholder in currentTree') === true) {
+                if (exec('on targetNode middle') === false) {
+                  if (exec('at indent right') === true) {
+                    targets['append'](info);
+                  } else if (exec('at indent right') === false) {
+                    targets['after'](info);
+                  }
+                } else if (exec('on targetNode middle') === true) {
+                  targets['append'](info);
+                }
+              } else if (exec('placeholder in currentTree') === false) {
+                targets['append'](info);
+              }
+            }
+          }
+        } else if (exec('currentTree empty') === true) {
+          targets['append current tree'](info);
+        }
+      }
+    } else if (exec('targetNode is placeholder') === true) {
+      if (exec('targetNode at bottom') === false) {
+        if (exec('targetNode is the second child of root') === false) {
+          if (exec('targetNode is 1st child') === true) {
+            if (exec('targetNode is last child') === false) {
+              targets['nothing'](info);
+            } else if (exec('targetNode is last child') === true) {
+              if (exec('on targetNode middle') === false) {
+                if (exec('at left') === true) {
+                  targets['after target parent'](info);
+                } else if (exec('at left') === false) {
+                  targets['nothing'](info);
+                }
+              } else if (exec('on targetNode middle') === true) {
+                if (exec('at left') === true) {
+                  targets['after target parent'](info);
+                } else if (exec('at left') === false) {
+                  targets['nothing'](info);
+                }
+              }
+            }
+          } else if (exec('targetNode is 1st child') === false) {
+            if (exec('targetNode is last child') === true) {
+              if (exec('on targetNode middle') === true) {
+                if (exec('at left') === true) {
+                  targets['after target parent'](info);
+                } else if (exec('at left') === false) {
+                  if (exec('at indent right') === true) {
+                    targets['append prev'](info);
+                  } else if (exec('at indent right') === false) {
+                    targets['nothing'](info);
+                  }
+                }
+              } else if (exec('on targetNode middle') === false) {
+                if (exec('at left') === true) {
+                  targets['after target parent'](info);
+                } else if (exec('at left') === false) {
+                  if (exec('at indent right') === true) {
+                    targets['append prev'](info);
+                  } else if (exec('at indent right') === false) {
+                    targets['nothing'](info);
+                  }
+                }
+              }
+            } else if (exec('targetNode is last child') === false) {
+              if (exec('on targetNode middle') === true) {
+                if (exec('at left') === true) {
+                  targets['nothing'](info);
+                } else if (exec('at left') === false) {
+                  if (exec('at indent right') === true) {
+                    targets['append prev'](info);
+                  } else if (exec('at indent right') === false) {
+                    targets['nothing'](info);
+                  }
+                }
+              } else if (exec('on targetNode middle') === false) {
+                if (exec('at left') === true) {
+                  targets['nothing'](info);
+                } else if (exec('at left') === false) {
+                  if (exec('at indent right') === true) {
+                    targets['append prev'](info);
+                  } else if (exec('at indent right') === false) {
+                    targets['nothing'](info);
+                  }
                 }
               }
             }
           }
-        } else if (exec('placeholder in currentTree') === false) {
-          targets['append'](info);
+        } else if (exec('targetNode is the second child of root') === true) {
+          if (exec('on targetNode middle') === true) {
+            if (exec('at indent right') === true) {
+              targets['append prev'](info);
+            } else if (exec('at indent right') === false) {
+              targets['nothing'](info);
+            }
+          } else if (exec('on targetNode middle') === false) {
+            if (exec('at indent right') === true) {
+              targets['append prev'](info);
+            } else if (exec('at indent right') === false) {
+              targets['nothing'](info);
+            }
+          }
         }
-      } else if (exec('placeholder existed') === false) {
-        targets['nothing'](info);
-      }
-    } else if (exec('targetNode is placeholder') === true) {
-      if (exec('targetNode parent is root') === false) {
+      } else if (exec('targetNode at bottom') === true) {
         if (exec('targetNode is 1st child') === true) {
-          if (exec('targetNode is last child') === true) {
+          if (exec('on targetNode middle') === false) {
+            if (exec('at left') === true) {
+              targets['after target parent'](info);
+            } else if (exec('at left') === false) {
+              targets['nothing'](info);
+            }
+          } else if (exec('on targetNode middle') === true) {
             if (exec('at left') === false) {
               targets['nothing'](info);
             } else if (exec('at left') === true) {
               targets['after target parent'](info);
             }
-          } else if (exec('targetNode is last child') === false) {
-            targets['nothing'](info);
           }
         } else if (exec('targetNode is 1st child') === false) {
-          if (exec('targetNode is last child') === true) {
-            if (exec('targetNode prev is droppable') === true) {
-              if (exec('at left') === true) {
-                targets['after target parent'](info);
-              } else if (exec('at left') === false) {
-                if (exec('at indent right') === true) {
-                  targets['append prev'](info);
-                } else if (exec('at indent right') === false) {
-                  targets['nothing'](info);
-                }
-              }
-            } else if (exec('targetNode prev is droppable') === false) {
-              if (exec('at left') === false) {
-                targets['nothing'](info);
-              } else if (exec('at left') === true) {
-                targets['after target parent'](info);
-              }
-            }
-          } else if (exec('targetNode is last child') === false) {
-            if (exec('targetNode prev is droppable') === true) {
-              if (exec('at left') === true) {
-                targets['nothing'](info);
-              } else if (exec('at left') === false) {
-                if (exec('at indent right') === true) {
-                  targets['append prev'](info);
-                } else if (exec('at indent right') === false) {
-                  targets['nothing'](info);
-                }
-              }
-            } else if (exec('targetNode prev is droppable') === false) {
-              targets['nothing'](info);
-            }
-          }
-        }
-      } else if (exec('targetNode parent is root') === true) {
-        if (exec('targetNode is 1st child') === false) {
-          if (exec('targetNode prev is droppable') === true) {
+          if (exec('on targetNode middle') === false) {
             if (exec('at left') === true) {
-              targets['nothing'](info);
+              targets['after target parent'](info);
             } else if (exec('at left') === false) {
               if (exec('at indent right') === true) {
                 targets['append prev'](info);
@@ -51297,11 +51683,17 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
                 targets['nothing'](info);
               }
             }
-          } else if (exec('targetNode prev is droppable') === false) {
-            targets['nothing'](info);
+          } else if (exec('on targetNode middle') === true) {
+            if (exec('at left') === true) {
+              targets['after target parent'](info);
+            } else if (exec('at left') === false) {
+              if (exec('at indent right') === true) {
+                targets['append prev'](info);
+              } else if (exec('at indent right') === false) {
+                targets['nothing'](info);
+              }
+            }
           }
-        } else if (exec('targetNode is 1st child') === true) {
-          targets['nothing'](info);
         }
       }
     }
@@ -51313,51 +51705,28 @@ function autoMoveDragPlaceHolder (e, opt, dhStore, trees) {
 }
 
 function getOf4(el, space) {
-  var r = Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["f" /* getOffset */])(el);
+  var r = Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["f" /* getOffset */])(el);
   r.x2 = r.x + el.offsetWidth;
   r.y2 = r.y + el.offsetHeight + space;
   return r;
-} // branch is a node
-
-
-function resolveBranchDroppable(info, branch) {
-  var isNodeDroppable;
-
-  if (info.store.isNodeDroppable) {
-    isNodeDroppable = info.store.isNodeDroppable;
-  } else {
-    isNodeDroppable = function isNodeDroppable(node, nodeVm, store) {
-      if (node.hasOwnProperty('droppable')) {
-        return node.droppable;
-      } else {
-        return true;
-      }
-    };
-  }
-
-  branch._droppable = isNodeDroppable(branch, branch._vm, branch._vm.store);
-  Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["c" /* depthFirstSearch */])(branch, function (item, i, parent) {
-    if (item === branch) {
-      return;
-    }
-
-    if (item.isDragPlaceHolder || item === info.node) {
-      return 'skip children';
-    }
-
-    item._droppable = isNodeDroppable(item, item._vm, item._vm.store);
-
-    if (!item.open) {
-      return 'skip children';
-    }
-  });
 }
+
+autoMoveDragPlaceHolder.dragStart = function dragStart() {};
+
+autoMoveDragPlaceHolder.dragEnd = function dragEnd() {
+  prevTree = null;
+  droppableIds = {};
+  draggableIds = {};
+};
 
 var DraggableTreeNode = {
   extends: TreeNode,
   name: 'TreeNode',
   mounted: function mounted() {
     var _this = this;
+
+    this.store.isNodeDraggable = isNodeDraggable;
+    this.store.isNodeDroppable = isNodeDroppable;
 
     if (this.isRoot || this.data.isDragPlaceHolder) {
       return;
@@ -51374,14 +51743,23 @@ var DraggableTreeNode = {
           },
           minTranslate: 10,
           drag: function drag(e, opt, store) {
-            // this store is not tree
-            if (_this.store.ondragstart && _this.store.ondragstart(_this.data, _this, _this.store, e, opt, store) === false) {
+            autoMoveDragPlaceHolder.dragStart(); // this store is not tree
+
+            var draggableHelperInfo = {
+              event: e,
+              options: opt,
+              store: store
+            };
+
+            if (_this.store.ondragstart && _this.store.ondragstart(_this.data, draggableHelperInfo) === false) {
               return false;
             }
 
-            if (!isNodeDraggable(_this.data, _this)) {
+            if (!isNodeDraggable(_this.data)) {
               return false;
-            } // record start positon
+            }
+
+            _this.store.$emit('drag', _this.data); // record start positon
 
 
             var siblings = _this.data.parent.children;
@@ -51391,30 +51769,52 @@ var DraggableTreeNode = {
 
             };
             dplh.innerStyle.height = store.el.offsetHeight + 'px';
-            Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["d" /* insertAfter */])(dplh, _this.data);
+            Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["d" /* insertAfter */])(dplh, _this.data);
             _this.data.class += ' dragging'; // console.log('drag start');
           },
           moving: function moving(e, opt, store) {
-            return autoMoveDragPlaceHolder.call(_this, e, opt, store, _this.store.trees);
+            if (store.movedCount === 0) {
+              return;
+            }
+
+            var draggableHelperInfo = {
+              event: e,
+              options: opt,
+              store: store
+            };
+            return autoMoveDragPlaceHolder.call(_this, draggableHelperInfo);
           },
           drop: function drop(e, opt, store) {
-            if (_this.store.ondragend && _this.store.ondragend(_this.data, _this, _this.store, e, opt, store) === false) {// can't drop, no change
+            autoMoveDragPlaceHolder.dragEnd();
+            var draggableHelperInfo = {
+              event: e,
+              options: opt,
+              store: store
+            };
+
+            if (_this.store.ondragend && _this.store.ondragend(_this.data, draggableHelperInfo) === false) {
+              Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["b" /* arrayRemove */])(dplh.parent.children, dplh); // can't drop, no change
             } else {
-              Object(__WEBPACK_IMPORTED_MODULE_1_tree_helper__["d" /* insertAfter */])(_this.data, dplh);
-              Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["b" /* arrayRemove */])(dplh.parent.children, dplh);
-              _this.data.class = _this.data.class.replace(/(^| )dragging( |$)/g, ' '); // emit change event if changed
+              var targetTree = dplh._vm.store;
+              var crossTree = targetTree !== _this.store;
+              var oldTree = crossTree ? _this.store : null;
+              Object(__WEBPACK_IMPORTED_MODULE_0_tree_helper__["d" /* insertAfter */])(_this.data, dplh);
+              Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["b" /* arrayRemove */])(dplh.parent.children, dplh);
+              _this.data.class = _this.data.class.replace(/(^| )dragging( |$)/g, ' ');
+              targetTree.$emit('drop', _this.data, targetTree, oldTree);
+              oldTree && oldTree.$emit('drop', _this.data, targetTree, oldTree); // emit change event if changed
 
               var siblings = _this.data.parent.children;
 
               if (siblings === _this.startPosition.siblings && siblings.indexOf(_this.data) === _this.startPosition.index) {// not moved
               } else {
-                _this.store.$emit('change', _this.data, _this, _this.store);
+                _this.store.$emit('change', _this.data, targetTree, oldTree);
+
+                oldTree && oldTree.$emit('change', _this.data, targetTree, oldTree);
               }
 
-              delete _this.startPosition;
-            }
-
-            _this.store.$emit('drop', _this.data, _this, _this.store); // console.log('drag end');
+              _this.startPosition = null;
+            } // console.log('drag end');
 
           }
         });
@@ -51422,7 +51822,7 @@ var DraggableTreeNode = {
         if (_this._draggableDestroy) {
           _this._draggableDestroy();
 
-          delete _this._draggableDestroy;
+          _this._draggableDestroy = null;
         }
       }
     }, {
@@ -51430,18 +51830,6 @@ var DraggableTreeNode = {
     });
   }
 };
-
-function isNodeDraggable(node, nodeVm) {
-  var store = nodeVm.store;
-
-  if (store.isNodeDraggable) {
-    return store.isNodeDraggable(node, nodeVm, store);
-  } else if (node.hasOwnProperty('draggable')) {
-    return node.draggable;
-  } else {
-    return true;
-  }
-}
 
 var trees = []; // for multiple trees
 // DragPlaceHolder, unique
@@ -51475,12 +51863,6 @@ var DraggableTree = {
     },
     ondragend: {
       type: Function
-    },
-    isNodeDraggable: {
-      type: Function
-    },
-    isNodeDroppable: {
-      type: Function
     }
   },
   components: {
@@ -51494,21 +51876,14 @@ var DraggableTree = {
     };
   },
   // computed: {},
-  watch: {
-    idMapping: {
-      immediate: true,
-      handler: function handler(idMapping) {
-        idMapping[this.dplh._id] = this.dplh;
-      }
-    }
-  },
+  // watch: {},
   // methods: {},
   created: function created() {
     trees.push(this);
   },
   mounted: function mounted() {},
   beforeDestroy: function beforeDestroy() {
-    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["b" /* arrayRemove */])(trees, this);
+    Object(__WEBPACK_IMPORTED_MODULE_1_helper_js__["b" /* arrayRemove */])(trees, this);
   }
 };
 
@@ -51797,7 +52172,7 @@ function appendTo(item, target) {
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_helper_js__ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_drag_event_service__ = __webpack_require__(54);
 /*!
- * draggable-helper v1.0.11
+ * draggable-helper v1.0.17
  * (c) 2018-present phphe <phphe@outlook.com> (https://github.com/phphe)
  * Released under the MIT License.
  */
@@ -51851,6 +52226,7 @@ function index (dragHandlerEl) {
 
   var destroy = function destroy() {
     __WEBPACK_IMPORTED_MODULE_1_drag_event_service__["a" /* default */].off(dragHandlerEl, 'end', dragHandlerEl._draggbleEventHandler);
+    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["j" /* offDOM */])(dragHandlerEl, 'selectstart', preventSelect);
     delete dragHandlerEl._draggbleEventHandler;
   };
 
@@ -51860,17 +52236,20 @@ function index (dragHandlerEl) {
 
   dragHandlerEl._draggbleEventHandler = start;
   __WEBPACK_IMPORTED_MODULE_1_drag_event_service__["a" /* default */].on(dragHandlerEl, 'start', dragHandlerEl._draggbleEventHandler);
+  Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["l" /* onDOM */])(dragHandlerEl, 'selectstart', preventSelect);
   return destroy;
 
   function start(e, mouse) {
-    e.stopPropagation();
-    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["l" /* onDOM */])(document.body, 'selectstart', preventSelect);
+    // e.stopPropagation()
     store.mouse = {
       x: mouse.x,
       y: mouse.y
     };
     store.initialMouse = Object.assign({}, store.mouse);
-    __WEBPACK_IMPORTED_MODULE_1_drag_event_service__["a" /* default */].on(document, 'move', moving);
+    __WEBPACK_IMPORTED_MODULE_1_drag_event_service__["a" /* default */].on(document, 'move', moving, {
+      passive: false
+    }); // passive: false is for touchmove event
+
     __WEBPACK_IMPORTED_MODULE_1_drag_event_service__["a" /* default */].on(window, 'end', drop);
   }
 
@@ -51884,7 +52263,6 @@ function index (dragHandlerEl) {
     var r = opt.drag && opt.drag(e, opt, store);
 
     if (r === false) {
-      Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["j" /* offDOM */])(document.body, 'selectstart', preventSelect);
       return false;
     } // dom actions
 
@@ -51907,18 +52285,7 @@ function index (dragHandlerEl) {
 
 
     Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["c" /* backupAttr */])(el, 'class');
-    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["a" /* addClass */])(el, opt.draggingClass); //
-
-    var _document = document,
-        body = _document.body;
-    var bodyOldStyle = (body.getAttribute('style') || '').trim();
-
-    if (bodyOldStyle.length && !bodyOldStyle.endsWith(';')) {
-      bodyOldStyle += ';';
-    }
-
-    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["c" /* backupAttr */])(body, 'style');
-    body.style = bodyOldStyle + 'cursor: move;';
+    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["a" /* addClass */])(el, opt.draggingClass);
   }
 
   function moving(e, mouse) {
@@ -51947,7 +52314,11 @@ function index (dragHandlerEl) {
       if (drag(e) === false) {
         canMove = false;
       }
-    }
+    } // move started
+    // e.preventDefault() to prevent text selection and page scrolling when touch
+
+
+    e.preventDefault();
 
     if (canMove && opt.moving) {
       if (opt.moving(e, opt, store) === false) {
@@ -51984,8 +52355,6 @@ function index (dragHandlerEl) {
         Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["m" /* restoreAttr */])(el, 'class');
       }
 
-      Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["m" /* restoreAttr */])(document.body, 'style');
-      Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["j" /* offDOM */])(document.body, 'selectstart', preventSelect);
       opt.drop && opt.drop(e, opt, store);
     }
 
@@ -52029,7 +52398,7 @@ function index (dragHandlerEl) {
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_helper_js__ = __webpack_require__(2);
 /*!
- * drag-event-service v0.0.2
+ * drag-event-service v0.0.6
  * (c) 2018-present phphe <phphe@outlook.com> (https://github.com/phphe)
  * Released under the MIT License.
  */
@@ -52042,8 +52411,8 @@ var events = {
   end: ['mouseup', 'touchend']
 };
 var index = {
-  canTouch: function canTouch() {
-    return 'ontouchstart' in document.documentElement;
+  isTouch: function isTouch(e) {
+    return e.type && e.type.startsWith('touch');
   },
   _getStore: function _getStore(el) {
     if (!el._wrapperStore) {
@@ -52053,28 +52422,33 @@ var index = {
     return el._wrapperStore;
   },
   on: function on(el, name, handler) {
+    var _hp$onDOM, _hp$onDOM2;
+
     var store = this._getStore(el);
 
-    var canTouch = this.canTouch();
+    var ts = this;
 
     var wrapper = function wrapper(e) {
       var mouse;
+      var isTouch = ts.isTouch(e);
 
-      if (!canTouch) {
-        if (name === 'start' && e.which !== 1) {
-          // not left button
-          return;
-        }
-
-        mouse = {
-          x: e.pageX,
-          y: e.pageY
-        };
-      } else {
+      if (isTouch) {
+        // touch
         mouse = {
           x: e.changedTouches[0].pageX,
           y: e.changedTouches[0].pageY
         };
+      } else {
+        // mouse
+        mouse = {
+          x: e.pageX,
+          y: e.pageY
+        };
+
+        if (name === 'start' && e.which !== 1) {
+          // not left button mousedown
+          return;
+        }
       }
 
       return handler.call(this, e, mouse);
@@ -52083,22 +52457,37 @@ var index = {
     store.push({
       handler: handler,
       wrapper: wrapper
-    });
-    Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["l" /* onDOM */])(el, events[name][canTouch ? 1 : 0], wrapper);
+    }); // follow format will cause big bundle size
+    // 以下写法将会使打包工具认为hp是上下文, 导致打包整个hp
+    // hp.onDOM(el, events[name][0], wrapper, ...args)
+
+    for (var _len = arguments.length, args = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      args[_key - 3] = arguments[_key];
+    }
+
+    (_hp$onDOM = __WEBPACK_IMPORTED_MODULE_0_helper_js__["l" /* onDOM */]).call.apply(_hp$onDOM, [null, el, events[name][0], wrapper].concat(args));
+
+    (_hp$onDOM2 = __WEBPACK_IMPORTED_MODULE_0_helper_js__["l" /* onDOM */]).call.apply(_hp$onDOM2, [null, el, events[name][1], wrapper].concat(args));
   },
   off: function off(el, name, handler) {
     var store = this._getStore(el);
 
-    var canTouch = this.canTouch();
-    var eventName = events[name][canTouch ? 1 : 0];
+    for (var _len2 = arguments.length, args = new Array(_len2 > 3 ? _len2 - 3 : 0), _key2 = 3; _key2 < _len2; _key2++) {
+      args[_key2 - 3] = arguments[_key2];
+    }
 
     for (var i = store.length - 1; i >= 0; i--) {
       var _store$i = store[i],
-          _handler = _store$i.handler,
+          handler2 = _store$i.handler,
           wrapper = _store$i.wrapper;
 
-      if (_handler === _handler) {
-        Object(__WEBPACK_IMPORTED_MODULE_0_helper_js__["j" /* offDOM */])(el, eventName, wrapper);
+      if (handler === handler2) {
+        var _hp$offDOM, _hp$offDOM2;
+
+        (_hp$offDOM = __WEBPACK_IMPORTED_MODULE_0_helper_js__["j" /* offDOM */]).call.apply(_hp$offDOM, [null, el, events[name][0], wrapper].concat(args));
+
+        (_hp$offDOM2 = __WEBPACK_IMPORTED_MODULE_0_helper_js__["j" /* offDOM */]).call.apply(_hp$offDOM2, [null, el, events[name][1], wrapper].concat(args));
+
         store.splice(i, 1);
       }
     }
@@ -52109,59 +52498,7 @@ var index = {
 
 
 /***/ }),
-/* 55 */,
-/* 56 */
-/***/ (function(module, exports) {
-
-// removed by extract-text-webpack-plugin
-
-/***/ }),
-/* 57 */,
-/* 58 */,
-/* 59 */,
-/* 60 */,
-/* 61 */,
-/* 62 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// style-loader: Adds some css to the DOM by adding a <style> tag
-
-// load the styles
-var content = __webpack_require__(63);
-if(typeof content === 'string') content = [[module.i, content, '']];
-if(content.locals) module.exports = content.locals;
-// add the styles to the DOM
-var update = __webpack_require__(47)("1443d0aa", content, false, {});
-// Hot Module Replacement
-if(false) {
- // When the styles change, update the <style> tags
- if(!content.locals) {
-   module.hot.accept("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-009ccf58\",\"scoped\":false,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MenuTree.vue", function() {
-     var newContent = require("!!../../../../node_modules/css-loader/index.js!../../../../node_modules/vue-loader/lib/style-compiler/index.js?{\"vue\":true,\"id\":\"data-v-009ccf58\",\"scoped\":false,\"hasInlineConfig\":true}!../../../../node_modules/sass-loader/lib/loader.js!../../../../node_modules/vue-loader/lib/selector.js?type=styles&index=0!./MenuTree.vue");
-     if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
-     update(newContent);
-   });
- }
- // When the module is disposed, remove the <style> tags
- module.hot.dispose(function() { update(); });
-}
-
-/***/ }),
-/* 63 */
-/***/ (function(module, exports, __webpack_require__) {
-
-exports = module.exports = __webpack_require__(46)(false);
-// imports
-
-
-// module
-exports.push([module.i, "\n.he-tree {\n  border: 1px solid #ccc;\n  padding: 20px;\n  float: left;\n  min-width: 300px;\n  margin-right: 30px;\n}\n.tree-node-inner {\n  padding: 5px;\n  border: 1px solid #ccc;\n  cursor: pointer;\n}\n.draggable-placeholder-inner {\n  border: 1px dashed #0088F8;\n  -webkit-box-sizing: border-box;\n          box-sizing: border-box;\n  background: rgba(0, 136, 249, 0.09);\n  color: #0088f9;\n  text-align: center;\n  padding: 0;\n  display: -webkit-box;\n  display: -ms-flexbox;\n  display: flex;\n  -webkit-box-align: center;\n      -ms-flex-align: center;\n          align-items: center;\n}\n", ""]);
-
-// exports
-
-
-/***/ }),
-/* 64 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -52172,10 +52509,9 @@ var render = function() {
     attrs: {
       data: _vm.menuTree,
       draggable: "draggable",
-      "cross-tree": "cross-tree",
-      "is-Node-Droppable": _vm.maxDroppableLevel
+      "cross-tree": "cross-tree"
     },
-    on: { change: _vm.treeChange },
+    on: { change: _vm.treeChange, drag: _vm.ondrag },
     scopedSlots: _vm._u([
       {
         key: "default",
@@ -52228,6 +52564,12 @@ if (false) {
     require("vue-hot-reload-api")      .rerender("data-v-009ccf58", module.exports)
   }
 }
+
+/***/ }),
+/* 56 */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
 
 /***/ })
 /******/ ]);
